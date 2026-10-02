@@ -1,24 +1,13 @@
-import jwt
-import os
 import secrets
 import uuid
-
 from datetime import datetime, timedelta, timezone
-from dotenv import load_dotenv
-from fastapi import HTTPException, status
-from jwt.exceptions import InvalidTokenError
+
+import jwt
 from pwdlib import PasswordHash
-from app.models import Tenant
 
-credentials_exception = HTTPException(
-    status_code=status.HTTP_401_UNAUTHORIZED,
-    detail="Could not validate credentials",
-)
-
-load_dotenv()
-
-SECRET_KEY = os.getenv("SECRET_KEY")
-ALGORITHM = "HS256"
+from app.config import ALGORITHM, SECRET_KEY
+from app.database import SessionLocal
+from app.models.database_models import Tenant
 
 api_key_hasher = PasswordHash.recommended()
 
@@ -38,8 +27,11 @@ def verify_api_key(raw_secret_part, stored_hash):
     return api_key_hasher.verify(raw_secret_part, stored_hash)
 
 def authenticate_tenant(incoming_api_key, session):
-    tenant_id_str, secret_part = incoming_api_key.split(".")
-    tenant_id = uuid.UUID(tenant_id_str)
+    try:
+        tenant_id_str, secret_part = incoming_api_key.split(".")
+        tenant_id = uuid.UUID(tenant_id_str)
+    except ValueError:
+        return None
     
     # look up the tenant by tenant_id
     tenant = session.query(Tenant).filter(Tenant.tenant_id == tenant_id).first()
@@ -63,17 +55,24 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-async def get_current_tenant(token, session):
+def register_tenant(tenant_name):
+    tenant_id = uuid.uuid4()  # generate it yourself, in Python, right now
+
+    raw_key = generate_api_key(tenant_id)
+    hashed_key = get_api_key_hash(raw_key.split(".")[1])  # hash only the secret part
+
+    session = SessionLocal()
+    hmac_secret = generate_hmac_secret()
+    new_tenant = Tenant(
+        tenant_id=tenant_id,  # explicitly pass it in, instead of relying on default=
+        tenant_name=tenant_name,
+        hmac_secret=hmac_secret,
+        api_key_hash=hashed_key,
+    )
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        tenant_id = payload.get("sub")
-        if tenant_id is None:
-            raise credentials_exception
-    except InvalidTokenError:
-        raise credentials_exception
-    tenant = session.query(Tenant).filter(Tenant.tenant_id == uuid.UUID(tenant_id)).first()
-    if not tenant:
-        raise credentials_exception
-    else:
-        return tenant
-    
+        session.add(new_tenant)
+        session.commit()
+    finally:
+        session.close()
+
+    return {"api_key": raw_key, "hmac_secret": hmac_secret}

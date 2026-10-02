@@ -1,25 +1,19 @@
-import uuid
+import asyncio
+from contextlib import asynccontextmanager
 
-from app.database import SessionLocal
-from app.models import Tenant
-from app.auth import generate_api_key, get_api_key_hash, generate_hmac_secret
+from fastapi import FastAPI
 
-def register_tenant(tenant_name):
-    tenant_id = uuid.uuid4()  # generate it yourself, in Python, right now
-    
-    raw_key = generate_api_key(tenant_id)
-    hashed_key = get_api_key_hash(raw_key.split(".")[1])  # hash only the secret part
-    
-    session = SessionLocal()
-    hmac_secret = generate_hmac_secret()
-    new_tenant = Tenant(
-        tenant_id=tenant_id,          # explicitly pass it in, instead of relying on default=
-        tenant_name=tenant_name,
-        hmac_secret = hmac_secret,
-        api_key_hash=hashed_key
-    )
-    session.add(new_tenant)
-    session.commit()
-    session.close()
-    
-    return {"api-key": raw_key, "hmac-secret": hmac_secret}
+from app.routers import auth, jobs
+from app.services.scheduler import scheduler_loop
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    task = asyncio.create_task(scheduler_loop())
+    yield
+    task.cancel()
+
+app = FastAPI(lifespan=lifespan)
+
+app.include_router(auth.router)
+app.include_router(jobs.router)

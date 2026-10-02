@@ -5,3 +5,5 @@ pwdlib[argon2]
 sqlalchemy
 psycopg2-binary
 uvicorn
+redis
+httpx
