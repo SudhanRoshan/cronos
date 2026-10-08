@@ -33,7 +33,7 @@ failure → security by design → AI-assisted operations.
 - **Database:** PostgreSQL — jobs table, execution/attempt history, tenant secrets
 - **Caching:** Redis — cache-aside on `GET /jobs` (key `jobs:tenant:{id}`), avoiding hammering the DB
 - **Queue / background worker:** the core scheduling loop that checks for and dispatches due jobs
-- **Deployment:** Docker → AWS EC2 → Kubernetes (per roadmap Weeks 13–14)
+- **Deployment:** Docker → local docker-compose stack (FastAPI + Postgres + Redis), no public hosting → Kubernetes on minikube (per roadmap Weeks 13–14). AWS dropped: free-only constraint.
 - **Code structure:** `routers/` (HTTP only) → `services/` (logic and DB work, no HTTP
   knowledge) → `models/` (SQLAlchemy models plus Pydantic request/response models)
 
@@ -371,7 +371,7 @@ functions (`get_logs_row`, `list_jobs_by_state`).
   - ✅ `register_tenant()` try/finally
   - ✅ `GET /jobs/{id}`, `GET /jobs/{id}/logs`, `GET /jobs?state=`
   - ⬜ Week 12 DSA (Graphs intro, BFS/DFS, 3 problems) — weekend only
-- ⬜ AWS deployment (Week 13)
+- ⬜ Local Docker deployment (Week 13) — docker-compose stack running end to end; AWS dropped
 - ⬜ Kubernetes (Week 14)
 - ⬜ Type hints + docstrings + inline comments audit, part of the Week 17 checkpoint
 - ⬜ Manual retry of a dead job — decision deferred to Week 17
