@@ -350,7 +350,7 @@ functions (`get_logs_row`, `list_jobs_by_state`).
 
 ---
 
-## Status (as of October 3, 2026 — Day 79)
+## Status (as of October 10, 2026 — Day 86)
 
 - ✅ Project domain and idea locked in (Week 9)
 - ✅ AI feature scope locked in (A, B, C committed; D, E as stretch goals)
@@ -371,7 +371,12 @@ functions (`get_logs_row`, `list_jobs_by_state`).
   - ✅ `register_tenant()` try/finally
   - ✅ `GET /jobs/{id}`, `GET /jobs/{id}/logs`, `GET /jobs?state=`
   - ⬜ Week 12 DSA (Graphs intro, BFS/DFS, 3 problems) — weekend only
-- ⬜ Local Docker deployment (Week 13) — docker-compose stack running end to end; AWS dropped
+- ✅ Local Docker deployment (Week 13) — Dockerfile + docker-compose (app + Postgres + Redis), verified Oct 10
+  - ✅ DB and Redis hosts read from `DB_HOST` / `REDIS_HOST` env vars (fall back to `localhost` for local runs)
+  - ✅ Postgres healthcheck; app starts only once Postgres is healthy (`service_healthy`)
+  - ✅ Secrets (`DB_PASSWORD`, `SECRET_KEY`) injected via compose `environment:` from `.env`; `.env` kept out of the image by `.dockerignore`
+  - ✅ Scheduler fired a job inside the containers: log `success`/200, state back to `pending`, no schedule drift
+  - ✅ Pin `postgres:18-alpine` in compose
 - ⬜ Kubernetes (Week 14)
 - ⬜ Type hints + docstrings + inline comments audit, part of the Week 17 checkpoint
 - ⬜ Manual retry of a dead job — decision deferred to Week 17

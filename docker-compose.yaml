@@ -1,6 +1,20 @@
 services:
+  app:
+    build: .
+    ports:
+      - 8000:8000
+    environment:
+      DB_HOST: postgres
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: redis
+      SECRET_KEY: ${SECRET_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
   postgres:
-    image: postgres:alpine
+    image: postgres:18-alpine
     ports:
       - 5432:5432
     volumes:
@@ -9,6 +23,11 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: cronos_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cronos_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
   redis:
     image: redis:alpine
     ports:
